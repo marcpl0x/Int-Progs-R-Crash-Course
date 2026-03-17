@@ -2,10 +2,10 @@
 title: "03_Multivariate"
 author: "Marc Koh"
 date: "2025-10-14"
-output: github_document
-#  html_document: 
-#    toc: TRUE
-#    toc_float: TRUE
+output: #github_document
+  html_document: 
+    toc: TRUE
+    toc_float: TRUE
 
 ---
 
@@ -99,6 +99,7 @@ library(tidyverse) # for wrangling and cleaning
 library(vegan) # package designed specifically for community ecology
 library(ggordiplots) # ggplot version for multivariate visualisation
 library(MetBrewer) # MET colour palette
+devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
 library(pairwiseAdonis) # for pairwise testing
 ```
 
@@ -212,7 +213,7 @@ An NMDS is a visualisation technique used to visualise the community matrix.
 
 In simpler terms, a matrix allows for us to look at data from different angles to find similarities between each data point. This means that there are several different dimensions (or angles) in which we can interpret the matrix. The NMDS uses what is called distance-based ordination to find the best 2 to 3 dimensions in which the data can be best visualised.
 
-![An example of an NMDS plot from Kamp et al. 2020 with 3 Dimensions](Kamp_etal2020_nmds.jpg)
+![An example of an NMDS plot from Kamp et al. 2020 with 3 Dimensions](misc files/Kamp_etal2020_nmds.jpg)
 
 Each row of data is represented as one point in these plots.
 
