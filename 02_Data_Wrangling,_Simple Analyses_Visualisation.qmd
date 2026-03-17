@@ -1,9 +1,8 @@
 ---
-title: "R Crash Course - 01 Set Up"
+title: "R Crash Course - 02 Data Wrangling, Simple Analyses and Visualisation"
 author: "Marc Koh"
 date: "`r Sys.Date()`"
-format: 
-  #gfm:
+format: #github_document
   html:
     respect-user-color-scheme: true
     embed-resources: true
@@ -15,19 +14,19 @@ format:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Hello!
+# Hello again!
 
-First of all, welcome to the R Crash Course. This was designed specifically for UQ SENV International Programs, for those who have not used R before or need a quick refresher.
+This is is the second part to the R Crash Course. In this document, we'll tackle:
 
-If you have used R and RStudio throughout your undergraduate degree, you may have absolutely hated it (I know I did). I personally felt that I did not learn it well because it was not taught in a way that was interesting to me. Unfortunately, R is just one of those things that have to be taught in a somewhat generic way to undergrads because everyone has different backgrounds and interests.
+1. Some basic data wrangling using `tidyverse`
 
-I am not too sure what sort of interests you may have but I will try my best to keep these instructional files interesting for you don't feel like offing yourself as you follow along.
+2. Some basic visualisation techniques
 
-If you have any questions/spot any errors, please let me know and I'll rectify them. Good luck!
+3. Basic statistical analyses
 
-Marc
+This assumes that you have already completed then
 
-# Installing R
+# Data Wrangling
 
 So the first thing you'll need to do is install R and RStudio on your laptop/computer.
 
