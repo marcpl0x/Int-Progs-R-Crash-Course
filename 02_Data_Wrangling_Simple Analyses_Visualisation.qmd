@@ -1,0 +1,1243 @@
+---
+title: "R Crash Course - 02 Data Wrangling, Simple Analyses and Visualisation"
+author: "Marc Koh"
+date: "`r Sys.Date()`"
+format: 
+  gfm:
+  #html:
+  #  respect-user-color-scheme: true
+    embed-resources: true
+  #  toc: true
+  #  toc-location: left-body
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Hello again!
+
+This is is the second part to the R Crash Course. In this Markdown, we'll tackle:
+
+1.  Some basic data wrangling using `tidyverse`
+
+2.  Some basic visualisation techniques
+
+3.  Basic statistical analyses
+
+This assumes that you have already completed the previous Markdown or have prior knowledge of R set up, package installation and activation, and data import.
+
+Set yourself up with your working directory (where all your R files and data is) and make sure you have a script called something sensible open to type your code into.
+
+:::{.callout-note appearance = "simple"}
+
+## Note:
+
+This Markdown also assumes that you have some knowledge of statistical tests and lingo. Although there will be some explanation, we will NOT go into detail of statistical theory, as it is assumed that your home university would have taught you some of this in greater detail.
+
+If you are having troubles some of the concepts or want to know more, please consult your tutors or academic.
+
+:::
+
+# t-tests (Continous vs. 2 Categories)
+
+## Context
+
+Let's imagine that you have been out to Moreton Bay Research Station (MBRS) and you are trying to see if the crabs at 2 different locations, Polka Point and Adams Beach. You've collected 15 crabs from each location at random and weighed them, logging your data into 2 columns in a long format:
+
+-   `location`: where the crab was collected from
+
+-   `crab_mass_g`: the mass of the crab in grams
+
+## Data Wrangling
+
+"Data wrangling" is the term used to describe altering certain characteristics about your dataset (**NOT YOUR DATA**) so that R is able to read it as you intended to carry out analyses.
+
+We know that what we essentially have here is **continuous data from 2 different groups**.
+
+However, R is not aware of this. Let me show you...
+
+### Packages
+
+First and foremost, get into the habit of calling your packages first so that R knows that you are using functions from them:
+
+```{r packages, warning = FALSE, message=FALSE}
+# Packages ------
+library("tidyverse")
+library("readxl")
+library("here")
+```
+
+:::{.callout-note appearance = "simple"}
+
+## A Note on Warnings and Conflicts
+
+If you are not on the latest version of R, you may get warning messages that look like this:
+
+```{r warning eg, eval=FALSE}
+Warning: package ‘readxl’ was built under R version 4.5.2
+```
+
+In the words of one of my lecturers:
+
+*"... and like all good statisticians, we will ignore R's warnings"*
+
+You may also need to take note of Conflicts. This is what happens when you have 2 packages that have the same function names. For example, both `dplyr`, which you have just called, and `stats` (a built in package that activates on booting R) have a function called `filter()`.
+
+This means that you should be extra careful when calling functions, making sure to call the correct one by referencing the function:
+
+```{r conflict resoltion, eval= FALSE}
+dplyr::filter()
+# OR
+stats::filter()
+```
+
+:::
+
+### Import your data
+
+Just as we did previously, import the `dummy_univar.xlsx` data:
+
+```{r import crab data}
+fp <- here("data", "dummy_univar.xlsx") # generate file path
+
+crab <- read_xlsx(fp, sheet = "t test") # import excel sheet
+
+glimpse(crab) # check
+```
+
+Now, have a look at the structure of the data set using the `str()` function:
+
+```{r str crab}
+str(crab)
+```
+
+So here is what you can tell from the structure of the data frame:
+
+1.  You have a `crab_mass_g` column that has been read in as a `numeric` variable
+
+2.  You have a `location` variable that is classified as `character`
+
+Although not entirely an issue, we ideally want R to recognise `location` as a **categorical** variable instead of a character.
+
+Using `tidyverse`, you can do this using `mutate()` and `as_factor()`:
+
+```{r make location factor }
+crab <- crab %>% # take crab and reassign it to crab
+  mutate(location = as.factor(location)) # mutate `location` into a factor and assign it back to `location`
+
+glimpse(crab) # check
+```
+
+:::{.callout-note apppearance = "simple"}
+
+## Pipes
+
+The `%>%` seen in the above chunk is called a pipe. Pipes are used to string together functions for a better workflow.
+
+Think of a pipe as telling R "do this, AND THEN, do that"
+
+`%>%` is the `tidyverse` pipe and **WILL NOT work if** `tidyverse` **or** `dplyr` **is not loaded**. The default hot key for this is:
+
+-   Windows:
+    -   `Ctrl`+`Shift`+`M`
+-   MacOS:
+    -   `Cmd`+`Shift`+`M`
+
+Alternatively, you can use the universal pipe `|>` (`|`+`>`), which does not have a hot key.
+
+:::
+
+In the above chunk, you've taken the column `location`, which was initially recognised as `character`, and explicitly told R that you want it to be read in as a `factor` column instead. This is analogous with categorical.
+
+Just to be sure now, we should probably check to see if there are only 2 locations. You can do this using either:
+
+```{r levels eg}
+levels(crab$location) # this can only be done if you have already factorised the column
+```
+
+OR
+
+```{r unique eg}
+unique(crab$location) # more general use
+```
+
+OR
+
+```{r plot check}
+plot(crab)
+```
+
+You may have already spotted this in the `str()` chunk, but both the `unique()` and `levels()` functions tell us that there is someone (probably one of your incapable group mates, it could never be you!) has accidentally entered the location as "polka Point" instead of "Polka Point" like you had previously agreed upon!
+
+Let's fix this:
+
+```{r fix levels}
+crab <- crab %>% 
+  mutate(location = fct_recode(location,
+                               `Polka Point` = "polka Point")) # new level = old level
+
+str(crab) # check "Factor w/ 2 levels"
+```
+
+:::{.callout-tip appearance = "simple"}
+
+## Will it work??
+
+If you are unsure if a function will make the intended changes to your data frame, you could always assign it to a different object then overwrite the old one:
+
+```{r overwrite eg, eval = F}
+crab1 <- crab %>% # name it crab1 instead
+  mutate(location = fct_recode(location,
+                               `Polka Point` = "polka Point")) # new level = old level
+
+str(crab1) # check "Factor w/ 2 levels"
+
+crab <- crab1 # assign it back
+
+rm(crab1) # remove from environment to keep it clean
+
+```
+
+:::
+
+## Statistical Analysis
+
+Now that you have your dataset arranged appropriately, it's time to see if there is a difference in the means of the mass of crabs at Polka Point and Adams Beach.
+
+Because you are comparing 2 groups here, the most appropriate statistical test is a two tailed t-test.
+
+If you like hypotheses:
+
+$H_0$: There is no difference between the mass of crabs at Polka Point and Adams Beach
+
+$H_1$: There is a difference between the mass of crabs at Polka Point and Adams Beach
+
+:::{.callout-warning appearnce = "simple"}
+
+## There are difference kinds of t-tests!!!
+
+There are 3 basic types of t-tests depending on your data and hypotheses: One Tailed, Two Tailed, and Paired. If unsure which to use, try to look it up and ask your tutor for guidance.
+
+:::
+
+Here is how you do a t test in R:
+
+```{r crab t test}
+
+m1 <- t.test(crab_mass_g ~ location, # y ~ x
+             data = crab) # define the dataset to be used
+
+m1 # print result
+
+# OR
+
+m2 <- t.test(crab$crab_mass_g ~ crab$location) # this notation represents dataset$column.name
+m2
+```
+
+🎉Congratulations🎉! You've done your first(?) t-test!
+
+The next step of this is to report your statistics in your assessment piece. Have a think about this and read a few journal articles or author guidelines from the journal citation style you have to use.
+
+:::{.callout-note appearnce = "simple"}
+
+## Bitta trivia
+
+The t-test was formulated to make beer taste better (real)
+
+:::
+
+## Plots
+
+For the crab data, the most appropriate scientific plot would be a boxplot. Although we have done a rough one in the the Data Wrangling Section, it is not what we consider "publication ready".
+
+Generally in marine science, publication plots made in R are usually made using a package that is part of `tidyverse` called `ggplot`.
+
+`ggplot` is pretty intuitive as it works in layers (like an onion or cake). You start with the base `ggplot()` layer, then add layers of points (`geom_point` or `geom_jiter`), bars (`geom_bar`), boxplots (`geom_boxplot`), etc. You can even customize labels and colours in the same string of code using functions such as `labs()` and `scale_colour_manual()`. Almost like the tidyverse pipe `%>%`, you can use `+` to string these layers together.
+
+If you haven't already activated `tidyverse`, you will have run `library(ggplot)` before running the code below.
+
+```{r crab boxplot}
+( # putting the code in brackets like this immediately prints the plot out
+  crab_p1 <- ggplot(data = crab, #define data as crab
+                  aes(x = location, # define x aesthetic as location
+                      y = crab_mass_g))+ # define y aesthetic as mass
+  geom_boxplot()+ # add boxplot
+  labs(y = "Mass of Crab (g)", # relabel y axis
+       x = "Location")+ # relabel x axis
+  #geom_jitter()+ # add optional jitter of data points
+  theme_classic( # publication theme
+    base_size = 14 # set font size to 14
+    ) 
+)
+```
+
+Once you're happy with the customisation of your plot, you can export it using code as well:
+
+```{r gg save crab, eval=FALSE}
+ggsave(filename = "crab_boxplot.jpg", # name the image and define file type
+       plot = crab_p1, # the plot you want to export
+       dpi = 600, # resolution
+       height = 7,
+       width = 10)
+```
+
+# Some Plots Are More Equal Than Others
+
+Ideally, a good figure, along with a good figure caption, should allow the reader to almost grasp the full result of your study without actually having to read your entire results section.
+
+It is important to choose the correct plots to represent your results and data so that you can achieve this too!!
+
+## General Rules with Scientific Plots
+
+Generally in the scientific community, there are certain things to avoid if possible.
+
+### Examples of plots to avoid
+
+*"Scientists are never 100% sure, that's why we use p \< 0.05."*
+
+One thing to always note is that **the beauty of science is that we ALWAYS leave room for error because we are always refining our understanding of the world**. We therefore have to reflect this as well in our plots and should avoid using plots that present only 1 value.
+
+Bad plots include things like:
+
+-   Bar graphs (specifically without error bars)
+
+    -   The only show 1 value, usually a mean, without any error.
+
+    -   Allows you to hide how many data points are actually present in your dataset. If you use a bar plot, people automatically assume you do not have enough data points
+
+-   Pie Charts
+
+    -   Unless you work in finance, these are pretty dogshit.
+
+    -   Relies on the reader to proportion your whole pie into different angles and convert that into your unit of measurement. Why leave the interpretation up to your reader? So they can make a TikTok about it and use it to spread misinformation?
+
+-   Anything 3D if there are only 2 dimensions of data
+
+    -   Special place in hell for people who do 3D pie charts
+
+### Only add colour when absolutely necessary
+
+In the t-test example above, we used a box plot with no colour. The reason for this is that the plot communicates everything necessary for the reader without any bells and whistles.
+
+Take this plot for example:
+
+```{r bad plot, echo=F}
+(
+  crab_p1_bad <- ggplot(data = crab, 
+                  aes(x = location, 
+                      y = crab_mass_g, 
+                      fill = location) # fill in the boxplot
+                  )+ 
+  geom_boxplot()+ 
+  labs(y = "Mass of Crab (g)",
+       x = "Location")+
+  scale_fill_discrete("Location")+
+  theme_classic( 
+    base_size = 14 
+    ) 
+)
+```
+
+:::{.callout-note appearance = "simple"}
+
+## What's wrong with this plot?
+
+The distinction of colour here is not needed and adds **no informative value to the plot**. The x-axis already tells you that the 2 locations are distinct, the colour does not add to or take away from that distinction, it just requires you to add on a legend that does not add any new information to the plot.
+
+:::
+
+## Colour: When and How
+
+Colour in plots is necessary if you are **distinguishing between more than 2 groups, or there are subgroups** are involved.
+
+When you do choose to use colours, you can create your own palette. Just make sure you have the correct number of colours for your number of groups:
+
+```{r palette create}
+# If I had 4 groups
+
+my_pal <- c("black", "pink", "blue", "green")
+```
+
+If you are familiar with hexcodes, you can use those too:
+
+```{r hex palette}
+hex_pal <- c("#FF00CC", "#729891", "#875812", "#0000FF")
+```
+
+If you need help to see what names match which of R's 657 built in colours, run this in your console:
+
+```{r colour demo, eval = FALSE}
+demo("colors") # American spelling here
+```
+
+## What Colours should I choose?
+
+Colours that you pick should be contrasting, but at the same time, you should take extra care to make your palettes accessible. This means that you should try to pick colours that are colour vision deficient friendly.
+
+Apart from asking one of your colourblind mates, you can use packages such as the `colorblindchecker()` to ensure that your palettes are accessible.
+
+```{r colour blind check, warning=FALSE}
+#install.packages(colorblindcheck)
+library(colorblindcheck)
+
+colorblindcheck::palette_plot(my_pal)
+colorblindcheck::palette_plot(hex_pal)
+```
+
+### Palette Packages
+
+Not artistic or don't have the time for it? The beauty of R is that because it is open source, people go out of their way to create work around via packages to improve their workflow and willingly share it with the community. Some really cool palettes are available online that are also already colour vision deficient friendly. Here are some of my favourites:
+
+#### `MetBrewer`
+
+[MetBrewer](https://www.blakerobertmills.com/my-work/met-brewer) is made by old mate Blake Robert Mills. He essentially went to the Metropolitan Museum of Art (where they hold the Met Gala i think) nd colour matched various works of art. He based it on the work of [Professor Cynthia Brewer](https://scholar.google.com/citations?user=i2yTpDcAAAAJ&hl=en).
+
+Here is `MetBrewer` in action:
+
+```{r metbrewer demo, warning = F}
+library(MetBrewer)
+
+MetBrewer::display_all() # all the palettes in MetBrewer
+
+MetBrewer:::display_all(colorblind_only = T) # Colourblind friendly palettes
+```
+
+My personal favourite for plotting is "Kandinksy", inspired by [Wassily Kandinksy's Kleine Welten IV](https://www.moma.org/collection/works/67212).
+
+#### `wesanderson`
+
+Introduced to me by one of my favourite lecturers at UQ, [Daniel Harris](https://about.uq.edu.au/experts/16758) (very cool guy). The `wesanderson` package is exactly what it sounds like; a package of colour palettes that were used in the making of his movies (Fantastic Mr. Fox, The Grand Budapest Hotel, The Darjeeling Limited, etc.). 
+
+Read more [here](https://github.com/karthik/wesanderson) on Karthik Ram's (UC Berkley) GitHub...
+
+```{r wesanderson demo, warning = F}
+library(wesanderson)
+
+# from ?wes_palette
+
+wes_palette("Royal1")
+wes_palette("GrandBudapest1")
+wes_palette("Cavalcanti1")
+wes_palette("Cavalcanti1", 3)
+
+# If you need more colours than normally found in a palette, you
+# can use a continuous palette to interpolate between existing
+# colours
+pal <- wes_palette(21, name = "Zissou1", type = "continuous")
+image(volcano, col = pal)
+```
+#### `viridis`
+
+`viridis` is the most commonly used colour palette for continuous data. All the pallettes in it are colour blind friendly.
+
+There is an awesome intro to it on [CRAN](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html) 
+
+```{r viridis demo, warning = F}
+library(viridis)
+
+#create dummy heatmap data
+x <- LETTERS[1:20]
+y <- paste0("var", seq(1,20))
+data <- expand.grid(X=x, Y=y)
+data$Z <- runif(400, 0, 5)
+ 
+# Heatmap 
+ggplot(data, aes(X, Y, fill= Z)) + 
+  geom_tile()+
+  scale_fill_viridis(discrete = F) # fill with viridis palette
+```
+
+## Plotting Resources
+
+It would be very advantageous for your scientific career if you familiarise yourself with plotting in `ggplot`. Here's a [cheatsheet](https://posit.co/wp-content/uploads/2022/10/data-visualization-1.pdf) that might be super useful.
+
+A word of note, it is possible to visualise your data in base R using basic functions like `plot()` and `hist()`, but it is generally only used for exploration of data to see how we should go about analysiing it.
+
+Another resource I cannot recommend enough it the [R Graph Gallery](https://r-graph-gallery.com/). I personally use this a lot because it shows you example code to generate all sorts of plots that you can refer to for your own data!!!
+
+# ANOVA (Continuous vs. 3 or more Categories)
+
+Analysis of Variance (ANOVA) is used in the context of testing for differences between 3 or more groups or subgroups. The theory behind it is that it alleviates the problem of committing Type I errors (false positives, or rejecting the null hypothesis when it is actually true) that comes from doing multiple t-tests. 
+
+ANOVAs produce an F-value which is the ratio of the variation *between* groups to the variation *within* groups using Mean Squares:
+
+$$F = \frac{MSB}{MSW} = \frac{Var_{Between}}{Var_{Within}}$$
+
+Essentially, the higher the F value, the more variation there is *between* samples than *within* groups, showing that the groups are distinct.
+
+ANOVAs also require you to do a post-hoc test called Tukey's Test for Honest Significant Difference. This is to show which groups are different, and how exactly they differ. 
+
+## Context
+
+You and your mates have collected data on coral sizes from 3 different sites on Heron Reef, Great Barrier Reef and want to see if there is a difference in sizes of different types of corals at different locations.  
+
+$H_0$: There is no difference between different types of corals at different locations on Heron Reef
+
+$H_1$: There is a difference between different types of corals at different locations on Heron Reef
+
+Your dataset has the following columns:
+
+- `location`: Three study sites
+
+- `coral morphospecies`: Three different types of coral
+
+- `size_mm` diameter of individual coral measured in $mm$
+
+## Data Import and Wrangling
+
+Import your dataset and make the necessary columns factors:
+
+```{r coral import}
+coral <- read_xlsx(fp, # from t-test section
+                   sheet = 2) # you can also reference sheet numbers if youa re sure it is the right sheet
+
+glimpse(coral)
+
+coral <- coral %>% 
+  mutate(location = as_factor(location),
+         coral_morphospecies = as_factor(`coral morphospecies`)) %>%  # here, I created a new column of coral_morphospecies because we don't like spaces!!!
+         select(!(`coral morphospecies`)) # remove the old column
+
+str(coral) # check
+```
+
+## Statistical Analysis
+
+As discussed above, there are 2 steps to ANOVAs:
+
+### The ANOVA itself:
+
+ANOVAs in R are pretty straightforward, the function used is `aov()`.
+
+
+:::{.callout-tip}
+
+Just like t-tests, there are different types of ANOVAs: One Way, or Two Way. This depends on your hypothesis. Ask your tutor if unsure!!!
+
+:::
+
+#### Formulating your ANOVA
+
+There are several ways to perform ANOVAs, depending on our hypotheses.
+
+For example, if we were purely looking for differences in sizes of different `coral_morphospecies` **OR** `location`, the formula of your ANOVA would look like:
+
+$$size\_mm\sim{coral\_morphospecies}$$
+$$Or$$
+
+$$size\_mm\sim{location}$$
+If you looking at looking at the effect that `location` **and** `coral morphospecies` individually in the same model:
+
+
+$$size\_mm\sim{location\,+\,coral\_morphospecies}$$
+In the context of our study here, we are looking at how both of these variables affect size **together**, or **how size is affected when the coral morphospecies and location interact with one another**.
+
+This calls for a formula where the $+$ is replaced with $*$ (multiplication):
+
+$$size\_mm\sim{location\,*\,coral\_morphospecies}$$
+
+Or in long form:
+
+
+$$size\_mm\sim{location\,+\,coral\_morphospecies\,+\,location:coral\_morphospecies}$$
+
+In the above formula, the interaction term considered is`location:coral_morphospecies`. This essentially considers variation in `size_mm` explained by `location`, `coral_morphospecies`, and the interaction of both terms (`location:coral_morphospecies`).
+
+
+:::{.callout-note appearance = "simple"}
+
+## To interact or not to interact
+
+Interaction of terms depends on the research question you are trying to answer. Do you want to consider each variable on its own? Or do you want to explain combined effects they may have on your response variable?
+
+:::
+
+
+
+```{r coral anova}
+m2 <- aov(size_mm ~ location*coral_morphospecies, # interaction of terms here
+          data = coral)
+
+summary(m2) # summary(your.anova) is needed here to print the full results you need
+```
+
+:::{.callout-tip}
+
+## Stars align...
+
+In certain analyses functions, you may see the `Signif. codes` legend pop up at the bottom of your `summary()`. The astericks (`*`) essentially reflect the p-value of your variable. 
+
+The more `*`s you get, the lower your p-value.
+
+:::
+
+Hooray! ANOVA done!
+
+What you have above essentially shows that:
+
+- `location` has a significant effect on size ($p < 0.001$)
+- `coral morphospecies` has a significant effect on size ($p < 0.001$)
+- `location:coral morphospecies` has a significant effect on size ($p < 0.05$)
+
+Ok so we know that there is a difference between these, but are they all different? 
+
+Find out next episode....
+
+### Tukey's Test for Honest Significant Difference
+
+To figure out which groups are exactly different, we'll have to do a Tukey Test.
+
+Let's look at `location` first:
+
+```{r coral tukey 1}
+m2_ph_location <- TukeyHSD(m2, # your anova
+                           which = "location") # select the column you are interested in
+m2_ph_location # print
+```
+
+If you are a visual person, you can also `plot()` the results:
+
+```{r coral tukey 1 plot}
+plot(m2_ph_location)
+```
+
+:::{.callout-note}
+
+In the `plot()` chunk, what you are looking for is each whisker plot to **not cross the dotted vertical line at 0**. 
+
+This means that 0 is not included in the confidence interval of possible differences. i.e., we are confident that there is an non-zero difference between both groups. 
+
+:::
+
+Now for `coral_morphospecies`:
+
+```{r coral tukey 2}
+m2_ph_morph <- TukeyHSD(m2, which = "coral_morphospecies")
+m2_ph_morph
+
+plot(m2_ph_morph)
+```
+
+Lastly, the interaction term:
+
+```{r coral tukey 3}
+m2_ph_int <- TukeyHSD(m2, which = "location:coral_morphospecies")
+m2_ph_int
+```
+
+As you can see, it is a very long list...
+
+Let's try a bit of wrangling to filter out the ones that do not show significant statistical difference:
+
+```{r interaction post hoc wrangling}
+str(m2_ph_int) # check the structure to see if we can change it to a data frame
+
+m2_ph_int_filtered <- m2_ph_int[["location:coral_morphospecies"]] %>% # take the table from the TukeyHSD
+  as.data.frame() %>% # convert it to a dataframe from a list
+  dplyr::filter(`p adj`< 0.05) # filter for p < 0.05
+
+# note that you cannot plot this the same way since you converted it into a different thing!!!
+
+m2_ph_int_filtered
+```
+
+## Plots
+
+Based on our data, the best thing to use to plot is the boxplot.
+
+### `location` Boxplot
+
+Similar to what you did with the t-test, so I will not comment on the code...
+
+```{r location boxplot}
+(coral_location_p <- ggplot(data = coral,
+                           aes(x = location,
+                               y = size_mm))+
+  geom_boxplot()+
+  labs(x = "Location",
+       y = "Size (mm)")+
+  theme_classic(base_size = 14)
+)
+```
+
+### `coral_morphospecies` Boxplot
+
+Again, easy stuff...
+
+```{r morph boxplot}
+(coral_morph_p <- ggplot(data = coral,
+                           aes(x = coral_morphospecies,
+                               y = size_mm))+
+  geom_boxplot()+
+  labs(x = "Coral Morphospecies",
+       y = "Size (mm)")+
+  theme_classic(base_size = 14)
+)
+```
+
+### `location:coral_morphospecies` Boxplot
+
+So the interacting term is a little more complicated. There are 2 ways to do this.
+
+
+#### Use Colour to Differentiate
+
+This is an appropriate time to use colour!
+
+Because you have 2 levels of differentiation (subgroups) due to the interaction term, we can use colour to differentiate these groups within groups. 
+
+```{r int boxplot 1}
+(coral_int1 <- ggplot(data = coral,
+                      aes(x = location,
+                          y = size_mm,
+                          fill = coral_morphospecies))+ # this adds a fill to the plot to differentiate the different coral morphospecies
+  geom_boxplot()+
+  labs(x = "Location",
+       y = "Size (mm)")+
+  scale_fill_manual("Coral Morphospecies", # 
+                    values = met.brewer("Kandinsky") # use MetBrewer palette
+                    )+
+  theme_classic(base_size = 14)
+)
+```
+
+#### Use Facets
+
+Alternatively, use a facet (subdivide a plot):
+
+```{r facet eg}
+(coral_int2 <- ggplot(data = coral,
+                      aes(x = location,
+                          y = size_mm))+ 
+  geom_boxplot()+
+  labs(x = "Location",
+       y = "Size (mm)")+
+  theme_classic(base_size = 14)+
+    facet_wrap(~coral_morphospecies, # facet by coral_species for easier comparison 
+               scales = "free")+ # scale the y-axis for each morphospecies
+  theme(axis.text.x = element_text(angle = 45,# angle text 45 degrees
+                                   hjust = 1)) # horizontal adjust
+)
+
+# the text adjustment must come at the end in this case to get the angle changed after the facet!!
+```
+
+# Linear Regression (Continuous vs Continuous)
+
+Linear regressions are exactly what they sound like: looking for linear correlations between 2 continuous variables.
+
+In a sense, it is a play on the equation of a linear line:
+
+$$y=mx+c$$
+
+However, unlike regular math formulae, we are fitting a line to data that does not always sit on the said line, unlike a mathematical truth like $y=mx+c$.
+
+We therefore have to account for the fact that **there will be a difference in what is recorded vs what we predict**. The difference in what is predicted  known as the **error or residual** in linear regression.
+
+This therefore approximates our $y$ to 
+
+$$\hat{y}\sim{\beta{_0}+\beta{_1}x}$$
+$$or$$
+
+$$y\sim{\beta{_0}+\beta{_1}x+\epsilon}$$
+
+Where $\epsilon$ is the residual/error.
+
+This error is important for linear regression graphs as it helps us to eventually calculate our confidence intervals. 
+
+It also allows for the calculation of the Coefficient of Determination ($R^2$). $R^2$ is an important measure as it essentially explains **how much of the variation of your response variable is explained by your model**. The closer this value is to 1, the better!
+
+:::{.callout-warning}
+ 
+## $R^2$ vs $r$
+ 
+ A key thing that people always mix up is correlation ($r$) and the Coefficient of Determination ($R^2$). They are not the same thing!!!
+ 
+- Correlation is the measure of how variables change with one another. Specifically, $r$ is **directional**, which means $-1<r<1$. The formula for correlation (Pearson's) is:
+
+$$r = \frac{\sum{xy}-n\bar{x}\bar{y}}{(n-1)s_{x}s_{y}}$$
+Where:
+- $n$ = sample size
+- $s_x$ = Standard Deviation of $x$
+- $s_y$ = Standard Deviation of $y$
+- $\bar{x}$ = mean of $x$
+- $\bar{y}$ = mean of $y$
+
+- $R^2$ explained above, is more of a measure of the "health" of your model overall and how much of the variation of $y$ is explained by the model you have fitted. It is important to note that $0<R^2<1$. **It can never be less than 0**.
+
+$$R^{2} =1- \frac{\sum_{i=1}^n({y_{i}}-\hat{y_i})^2}{\sum_{i=1}^n({y_{i}}-\bar{y_i})^2} = 1- \frac{Sum\,of\,Squares_{Residual}}{Sum\,of\,Squares_{Total}} $$
+Where:
+- $n$ = sample size
+- $y_i$ = actual value of $y$
+- $\hat{y_i}$ = predicted value of $y$
+- $\bar{y_i}$ = mean of $y$
+
+While in the specific case of 1 continuous vs 1 continuous models you can square the $r$ to get the $R^2$, **you may not be able to do so for more complex models, so I suggest you wipe your brain of that information**!!!!!
+
+In R, you will get 2 $R^2$ values:
+
+1. The Multiple $R^2$ value
+
+ - Accounts for variance explained by model, even with irrelevant or insignificant variables
+
+2. The Adjusted $R^2$ value
+
+ - Adjusts the $R^2$ to penalise for insignificant or junk variables
+
+:::
+
+## Context
+
+For this set of dummy data, you have somehow gotten the permits to collect data on Bull Sharks in Quandamooka for your MBRS project! Your group is trying to see if you can predict the length of a bull shark based on its girth.
+
+*For legal reasons this is a totally fictional dataset that I have generated and in no way were any sharks actually used in the generation of this data.*
+
+$H_0$: Girth of bull sharks *cannot* be used to predict length if bull sharks in Quandamooka.
+
+$H_1$: Girth of bull sharks *can* be used to predict length if bull sharks in Quandamooka. 
+
+
+## Import and Check Data
+
+Let's import the dataset:
+
+```{r shark import}
+shark <- read_xlsx(fp, sheet = "linear model")
+
+glimpse(shark)
+```
+
+:::{.callout-note appearance = "simple"}
+
+## Assumption of Normality
+
+One of the most important underlying assumptions of statistical tests that use means is the normality of the data (if the data is normally distributed or not).
+
+We have not tested this in the last few and I will explain why in a little bit.
+
+There are several ways to test for normality. Most commonly we use:
+
+1. Histograms
+
+  - What you are looking for is a big hump in the middle and sides (tails) that taper out nicely
+
+```{r shark hist}
+hist(shark$length_cm)
+hist(shark$girth_cm)
+```
+
+2. Shapiro-Wilk Test
+
+  - The Shapiro-Wilk Test essentially lines up your data points against a theoretical normal disruptions and tests the hypotheses:
+  
+  $H_0$: Data is normally distributed
+  
+  $H_1$: Data is not normally distributed
+
+```{r shark shapiro}
+shapiro.test(shark$length_cm)
+shapiro.test(shark$girth_cm)
+```
+
+3. Quantile-Quantile (Q-Q) Plot
+
+  - This essentialy is the Shapiro-Wilk Test visualised. Ideally, it should look like a nice straight diagonal line of points.
+
+```{r shark qq}
+qqnorm(shark$length_cm)
+qqnorm(shark$girth_cm)
+```
+
+So you can see that from eyeballing it, the Histograms are not exactly normal, but the Shapiro-Wilk Tests suggest borderline normality.
+
+In practice, it is always good to use different methods to test for normality and then decide what to do from there. That is why I have shown you both so that you can make a call on whether or not you should try transforming the data. 
+
+I will choose not to for now in this case.
+
+### Why didn't we test normality before?
+
+After a certain amount of samples, we generally assume that the data meets an approximately normal distribution because of the Central Limit Theorem, which states that *the sampling distribution of a mean approaches normal after a certain number of samples, regardless of the population size or distribution*. 
+
+Generally, we accept the minimum sample size to be 30.
+
+:::
+
+
+## Analysis
+
+Let's do a quick linear regression of the data using the `lm()` function:
+
+```{r shark lm}
+m3 <- lm(length_cm~girth_cm,
+         data = shark)
+
+summary(m3)
+```
+
+### Check Residuals
+
+An important assumption for Linear Regressions is to check the residuals.
+
+We can do this by plotting your model using `plot()`
+
+```{r shark resid check}
+par(mfrow = c(2,2)) # split your plotting area into 2 x 2
+
+plot(m3)
+
+graphics.off() # reset your plotting area
+```
+
+Of the 4 plots shown to you, we are going to ignore the bottom 2 (Scale-Location and Residuals vs Leverage) for now and focus on the top 2.
+
+#### Residuals vs Fitted
+
+This plot essentially shows you how far your predicted points are from the fitted linear line. Ideally, you want to have them look totally random with no discernible pattern. Analogies I have been told are that they should look like:
+
+- Stars in the night sky
+- Someone threw a bucket of pennies all over the ground
+
+```{r shark resid p1, echo = F}
+plot(m3, which = 1)
+```
+
+The main issue with our residuals now is that they are doing what we call *"trumpeting"*, where our residuals are concentrated on the left side and get wider as we move right across the graph. 
+
+We will see if we can fix this in a bit
+
+#### Q-Q Residuals
+
+Just like the Q-Q Plot mentioned above, this essentially fits your residuals to a theoretical normal distribution to provide a visual cue of how well it fits a normal distribution.
+
+```{r shark resid p2, echo = F}
+plot(m3, which = 2)
+```
+
+Pretty terrible!
+
+### Re-fitting Your Regression
+
+A lot of times, you will end up having to re-fit regressions because assumptions are not initially met. All part of the process...
+
+In the case of Linear Regressions, you can do this by transforming the data.
+
+Here is a table of suggestions for transformations you can apply to your data to potentially help you fit a better model:
+
+| Type of Transformation    | Function | When To Use It       |
+|---------------------------|:--------:|----------------------|
+| Log                       |`log(x)`  | Data is skewed right |
+| Square Root               |`sqrt(x)` | If Log is too strong |
+| Reciprocal ($\frac{1}{x}$)|`1/x`     | If Log is not enough |
+| Square                    |`x^2`     | For left skew        |
+| Exponential               |`exp(x)`  | For extreme left skew|
+
+: Potential types of transformations for your data.
+
+
+Some times, it takes a while for you to finally correct the model to your liking. It does take a bit of guessing and checking if you lack experience in this.
+
+
+:::{.callout-note}
+
+## Skew
+
+Remember that skew is relative to the tail of your data!!
+
+If your data is right skewed, that means that the tail is on the right side of the graph. Left means the tail is on the left side of the mean.
+
+:::
+
+
+### Transformed Regression
+
+So again, the current issue we are facing is that, as girth and length increases, so does the margin of error. i this case, it is generally best to transform your `y` (response) variable instead of your `x`.
+
+Let's create a new column in the shark dataset with a a few transformation for funsies and see if it improves `m3`:
+
+```{r new columns shark}
+shark <- shark %>% 
+  mutate(log_len = log(length_cm), # add an log length column
+         sqrt_len = sqrt(length_cm)) # sqrt length
+```
+
+Try 2 new models:
+
+```{r shark new models}
+par(mfrow = c(2,2)) # split plots into 2 x 2
+
+m3.log <- lm(log_len~girth_cm,
+              data = shark)
+
+summary(m3.log)
+plot(m3.log)
+
+m3.sqrt <- lm(sqrt_len~girth_cm,
+              data = shark)
+
+summary(m3.sqrt)
+plot(m3.sqrt)
+
+graphics.off() # reset graphics
+```
+
+The $R^2$ increased from 0.4675 to 0.4922 (log model) and 0.4916 (square root model). In either case, the improvement is not by much (only about 3% improvement) but the residuals have greatly improved.
+
+In this case, it is entirely up to you which model you choose to go with since the difference is so small, but based on $R^2$, I will use `m3.log` as our final model.
+
+## Visualisation
+
+Depending on which model you chose in the end, the visualisation would be different. Let's go through a few options.
+
+### Raw plot
+
+Here is a visualisation of the raw values of girth and length:
+
+```{r shark raw plot}
+(
+  shark_raw_p <- ggplot(data = shark,
+                        aes(x = girth_cm,
+                            y = length_cm))+
+    geom_point()+ # add points
+    geom_smooth(method = "lm")+ # add smoothed linear trend
+    labs(x = "Girth (cm)",
+         y = "Length (cm)")+
+    theme_classic(base_size = 14)
+)
+```
+
+### Transformed Plot
+
+All we have to do here is change the `y = ` argument in `aes()`
+
+```{r shark trf plot}
+(
+  shark_raw_p <- ggplot(data = shark,
+                        aes(x = girth_cm,
+                            y = log_len))+
+    geom_point()+ # add points
+    geom_smooth(method = "lm")+ # add smoothed linear trend
+    labs(x = "Girth (cm)",
+         y = "log(Length) (cm)")+ # make sure you change the label to reflect this
+    theme_classic(base_size = 14)
+)
+```
+
+### `visreg`
+
+`visreg` is another really cool package built to visualise regressions (who would have guessed...). You can use it for Linear Regressions (this tutorial) or more advanced models including Generalised Linear Models (GLMs) and Generalised Linear Mixed Models (GLMMs). You can find out more [here](https://pbreheny.github.io/visreg/index.html)
+
+While it uses base R to plot, you can output it as a `gg` object to make it compatible with `ggplot` functions.
+
+```{r visreg shark, warning = F}
+library(visreg)
+
+m3.log_visreg <- visreg(m3.log,
+                        xvar = "girth_cm", # note quotation here 
+                        scale = "response",# can be either "response" (log_len) or "linear" ("length_cm")
+                        xlab = "Girth (cm)",
+                        ylab = "log(Length) (cm)",
+                        partial = TRUE, # force points
+                        #points = list(cex = 1.5, # change point size
+                        #              pch = 2), # change point shape
+                        gg = TRUE) # make a gg object
+
+(
+  m3.log_visreg <- m3.log_visreg+
+  theme_classic(base_size = 14) # add theme
+  )
+
+```
+
+
+:::{.callout-warning}
+
+## Confidence Bands
+
+When plotting linear trends lines, always make sure to include confidence bands of some sort. In `geom_smooth()` and `visreg()`, the default confidence band that is shown in grey is the 95% Confidence Interval. Be sure to check this if using a new function!!
+
+:::
+
+# Chi Square Test (Categorical vs. Categorical)
+
+Chi (pronounced "kai") Square ($\chi^2$) Tests are useful for comparing categorical (usually count) data. 
+
+They come in 2 different forms:
+
+1. Chi Square Test for Goodness of Fit
+
+  - Tests to see if there is an equal chance of the same outcome between each group.
+
+2. Chi Square Test for Independence
+
+  - Tests to see if groups are independent of one another (if there are real differences in the counts)
+
+Chi Square Tests are a pretty uncommon form of statistical analysis, because they are very situational, usually for count data if you have nothing else to examine, and marine science as moved on to more complex analyses.
+
+Effectively, what you care calculating is:
+
+$$\chi^2 =\sum{\frac{(Observed-Expected)^2}{Expected}}$$
+
+
+They are relatively easy to understand and interpret.
+
+## Chi Sq Test for Goodness of Fit
+
+### Context
+
+Let's say we tried to do a project on trying to figure out if Giant Clams on Research Beach on Heron Island have a preference for settlement. Do they prefer to face a certain compass direction?
+
+$H_0$ Giant Clams have no settlement preference
+
+$H_1$ Giant Clams have a preference of a certain compass orientation
+
+### Data Import and Wrangling
+
+Chi Square test are the only analysis in R where the wide method of data entry is preferred over long.
+
+```{r clam import}
+clam <- read_xlsx(fp, sheet = 4)
+
+glimpse(clam)
+```
+
+### Analysis
+
+It is a super simple test:
+
+```{r clam chisq}
+chisq.test(clam) # no formula for this, just chuck the dataset in
+```
+
+How a Chi Square Test works is, unless told otherwise, it assumes that there is an expected equal probability for a sample to belong to each group that you have presented ($H_0$). In this case, it is telling you that there is statistical power to conclude that there is an actual difference in counts between each group.
+
+:::{.callout-note}
+
+Unlike an ANOVA, there is no required post-hoc test for most cases. It is sufficient to say that the proportions are different and present the propotions accordingly.
+
+:::
+
+### Visualisation
+
+This is one of the rare moments where something like a bar plot would be an appropriate plot. 
+
+We will, however, need to do some pivoting of the table into long format for the sake of `ggplot`:
+
+```{r clam wrangle for plot}
+clam_long <- clam %>% 
+  pivot_longer( # this makes the table long from wide
+    cols = 1:4, # columns 1 through to 4
+    names_to = "direction", # put compass directions into a column
+    values_to = "count") %>% # move the counts into their own column
+  mutate(direction = as_factor(direction)) # convert direction to a categorical variable
+
+str(clam_long)
+```
+
+
+```{r clam plot}
+(
+  clam_p <- ggplot(data = clam_long,
+                 aes(x = direction,
+                     y = count))+
+  geom_bar(stat="identity")+
+  labs(x = "Compass Direction",
+       y = "No. of Clams")+
+  theme_classic(base_size = 14)
+)
+```
+
+## Chi Sq Test for Independence
+
+This is usually used to compare counts from 2 categorical variables to see if they are independent of one another
+
+### Context
+
+Here, we are trying to see if mangroves and sea grass are utilised as nursery habitats by the same groups of organisms. Your group has left Go-Pros out in the mangroves and sea grass to and counted all the individual organisms who swam into frame.
+
+$H_0$ The same organisms utilise both mangroves and sea grass as nursery habitats
+
+$H_1$ Different organisms utilise mangroves and sea grass as nursery habitats
+
+### Data Import and Wrangling
+
+This time, The data is in long format, and we shall read it in that way:
+
+```{r nursery import}
+nursery <- read_xlsx(fp, sheet = 5)
+
+glimpse(nursery)
+```
+
+For analysis, we will have have to make the dataset wide using `pivot_wider()` and convert it to a contingecy table:
+
+```{r contigency table}
+nurse_cont <- nursery %>% 
+  pivot_wider(names_from = "Species", # take names from "Species"
+              values_from = "Count") %>%  # take numbers from "Count"
+  dplyr::select(!Habitat) %>% # remove the first column here, chisq.test() will only accept numbers
+  as.matrix() %>% # convert to a matrix
+  as.table() # convert to a table
+
+nurse_cont
+```
+
+
+### Analysis
+
+Conduct the Chi Square Test on the contingency table:
+
+```{r nursery chisq}
+chisq.test(nurse_cont)
+```
+
+This shows that there is a difference in the organisms that utilise each habitat!
+
+### Visualisation
+
+We will take the original data in long format and plot it. This is one of the times where it is appropriate to use colour!
+
+Firest, wrangle the data slightly:
+
+```{r nursery wrangle plot}
+nursery <- nursery %>% 
+  mutate(Habitat = as_factor(Habitat),
+         Species = as_factor(Species))
+
+str(nursery)
+```
+
+You can either facet the plots to show the different make ups, or plot them together and use colour:
+
+```{r nursery plots}
+(
+  nurse_p1 <- ggplot(data = nursery,
+                 aes(x = Habitat,
+                     y = Count,
+                     fill = Species))+
+  geom_bar(position = "fill", # this makes it proportional
+           stat="identity")+
+    scale_fill_manual("Species", 
+                      values = wes_palette("Darjeeling2"))+
+  labs(x = "Habitat",
+       y = "Propotion Composition")+
+  theme_classic(base_size = 14)
+)
+
+(
+  nurse_p2 <- ggplot(data = nursery,
+                 aes(x = Species,
+                     y = Count))+
+  geom_bar(stat="identity")+
+  labs(x = "Species",
+       y = "Count")+
+  theme_classic(base_size = 14)+
+    facet_wrap(~Habitat)
+)
+```
+
+
+# Parting Words
+
+Well done! you've made it to the end of this tutorial! Good luck with your projects and remember to ask for help from your tutors or academics if you need it!

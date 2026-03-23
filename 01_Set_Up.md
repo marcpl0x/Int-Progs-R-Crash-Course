@@ -1,6 +1,6 @@
 # R Crash Course - 01 Set Up
 Marc Koh
-2026-03-17
+2026-03-23
 
 # Hello!
 
@@ -87,11 +87,48 @@ window in RStudio):
 setwd("./Int-Progs-R-Crash-Course") # my target file
 ```
 
+## Setting Up An R Project
+
+Setting up a project in RStudio is a good practice as it allows you to
+compartmentalise your work. I personally like sorting my work into
+different projects as I work on multiple analyses all the time. It’s
+also good practice as it keeps all the stuff related to your one project
+in the same place.
+
+Upon booting up RStudio, go to the top right of the window just under
+your “Close” button and click on “*”Project: (None)*”.
+
+A pop up box that looks like this should appear:
+
+![Three options here, ignore version control for
+now!!](misc_files/new_proj_window.png)
+
+### New Directory
+
+Select this option if you have yet to compile your data into a file.
+
+You will then click on “*New Project*”, name your folder accordingly and
+save it somewhere sensible using the “*Browse*”.
+
+When ready, click “*Create Project*”.
+
+![If in doubt, save to desktop and move it all
+later](misc_files/create_new_proj.png)
+
+### Existing Directory
+
+This option is for if you have already made a folder somewhere on your
+computer with your data sitting in it.
+
+In this case, just navigate to the target folder using “*Browse*” and
+click “*Create Project*” when you have picked the right file.
+
 > [!NOTE]
 >
-> **I highly recommend saving to a cloud storage like OneDrive for ease
-> of access across multiple computers.** Saving to a local drive is fine
-> too, but please remember to back it up at every opportunity!!!
+> **I highly recommend saving your files to a cloud storage like
+> OneDrive for ease of access across multiple computers.** Saving to a
+> local drive is fine too, but please remember to back it up at every
+> opportunity!!!
 
 ## Starting Up a Script
 
@@ -236,7 +273,7 @@ second](misc_files/data_org_eg.png)
 > Try not to spend too much time beautifying your excel sheet with
 > colours, blank cells, etc. there is no point. R does not care for R
 > does not have eyes or empathy for your hard work. It will only make
-> your life so much harder if your excel sheet does not look like shit.
+> your life so much harder if your excel sheet try to make it pretty.
 >
 > R also <strong>HATES spaces and is CASE SENSITIVE</strong>. As much as
 > possible, try not to enter anything in your data with a space. use
@@ -281,6 +318,32 @@ str(crab) # this checks the structure of your data. a checkpoint to see if you'v
     'data.frame':   29 obs. of  2 variables:
      $ location   : chr  "Polka Point" "Polka Point" "Polka Point" "Polka Point" ...
      $ crab_mass_g: int  227 355 635 505 205 50 615 455 638 186 ...
+
+> [!NOTE]
+>
+> ### Syntax
+>
+> If you have coded before, you will be somewhat familiar with the
+> syntax of R (it is kinda similar to Python).
+>
+> If you haven’t ever coded in your life (surely you would have done
+> some of it in first year), the R syntax is generally easy to follow:
+>
+> ``` r
+> object <- function(arguement1 = "something", arguement2 = "something")
+> ```
+>
+> Where:
+>
+> - `object` is something you are creating to store in your Environment
+>   to reference later
+> - `function()` is a function which you are applying to something
+> - `argument =` specifies the “something” mentioned above or can be
+>   used to do certain things specific to the function. `arguement =`
+>   can be things like:
+>   - `file.path =` (what is the file path?)
+>   - `x =` (the `object`you created prior to this and want to change
+>   - `method =` (specific method you want to apply)
 
 #### Using `tidyverse`
 
@@ -340,25 +403,11 @@ library(here)
 
     Warning: package 'here' was built under R version 4.5.2
 
-    here() starts at C:/Users/user/OneDrive - The University of Queensland/International Programs/R Crash Course/Int-Progs-R-Crash-Course
-
 ``` r
 crab_path <- here("data", "crab.csv") # save filepath as object 
 
 crab_here <- read_csv(crab_path) # read from here() function
-```
 
-    Rows: 29 Columns: 2
-
-    ── Column specification ────────────────────────────────────────────────────────
-    Delimiter: ","
-    chr (1): location
-    dbl (1): crab_mass_g
-
-    ℹ Use `spec()` to retrieve the full column specification for this data.
-    ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
-
-``` r
 glimpse(crab_here)
 ```
 
@@ -393,7 +442,7 @@ glimpse(crab_excel)
     Rows: 29
     Columns: 2
     $ location    <chr> "Polka Point", "Polka Point", "Polka Point", "Polka Point"…
-    $ crab_mass_g <dbl> 227, 355, 635, 505, 205, 50, 615, 455, 638, 186, 562, 581,…
+    $ crab_mass_g <dbl> 470, 672, 505, 576, 228, 191, 675, 182, 33, 533, 194, 416,…
 
 ### Manual Imports
 
@@ -419,9 +468,6 @@ you mean names when I find out.
 6.  Click “Import”
 
 7.  Check your Environment to see if it imported correctly
-
-8.  Apologise to your nearest tree for wasting oxygen and try the other
-    methods
 
 # Hooray! 🥳
 
